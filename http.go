@@ -135,29 +135,17 @@ func (t *HTTP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 			case "allow":
-				if d.CountRemainingArgs() == 0 {
-					return d.ArgErr()
+				if err := t.unmarshalAllowCidr(d); err != nil {
+					return err
 				}
-
-				t.AllowCIDR = append(t.AllowCIDR, d.RemainingArgs()...)
 			case "deny":
-				if d.CountRemainingArgs() == 0 {
-					return d.ArgErr()
+				if err := t.unmarshalDenyCidr(d); err != nil {
+					return err
 				}
-
-				t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
 			case "circuit_breaker":
-				var ratio string
-				if !d.AllArgs(&ratio) {
-					return d.ArgErr()
+				if err := t.unmarshalCircuitBreaker(d); err != nil {
+					return err
 				}
-
-				circuitBreaker, err := strconv.ParseFloat(ratio, 64)
-				if err != nil {
-					return d.ArgErr()
-				}
-
-				t.CircuitBreaker = &circuitBreaker
 			case "enable_compression":
 				t.EnableCompression = true
 			case "scheme":
@@ -167,38 +155,82 @@ func (t *HTTP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			case "enable_websocket_tcp_conversion":
 				t.EnableWebsocketTCPConversion = true
 			case "basicauth":
-				for nesting := d.Nesting(); d.NextBlock(nesting); {
-					username := d.Val()
-					if username == "}" || username == "{" {
-						continue
-					}
-
-					var password string
-
-					if !d.AllArgs(&password) {
-						return d.ArgErr()
-					}
-
-					if username == "" || password == "" {
-						return d.Err("username and password cannot be empty or missing")
-					}
-
-					minLenPassword := 8
-					if len(password) < minLenPassword {
-						return d.Err("password must be at least eight characters.")
-					}
-
-					if t.BasicAuth == nil {
-						t.BasicAuth = map[string]string{}
-					}
-
-					t.BasicAuth[username] = password
+				if err := t.unmarshalBasicAuth(d); err != nil {
+					return err
 				}
 			default:
 				return d.ArgErr()
 			}
 		}
 	}
+
+	return nil
+}
+
+func (t *HTTP) unmarshalAllowCidr(d *caddyfile.Dispenser) error {
+	if d.CountRemainingArgs() == 0 {
+		return d.ArgErr()
+	}
+
+	t.AllowCIDR = append(t.AllowCIDR, d.RemainingArgs()...)
+
+	return nil
+}
+
+func (t *HTTP) unmarshalDenyCidr(d *caddyfile.Dispenser) error {
+	if d.CountRemainingArgs() == 0 {
+		return d.ArgErr()
+	}
+
+	t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
+
+	return nil
+}
+
+func (t *HTTP) unmarshalBasicAuth(d *caddyfile.Dispenser) error {
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		username := d.Val()
+		if username == "}" || username == "{" {
+			continue
+		}
+
+		var password string
+
+		if !d.AllArgs(&password) {
+			return d.ArgErr()
+		}
+
+		if username == "" || password == "" {
+			return d.Err("username and password cannot be empty or missing")
+		}
+
+		minLenPassword := 8
+		if len(password) < minLenPassword {
+			return d.Err("password must be at least eight characters.")
+		}
+
+		if t.BasicAuth == nil {
+			t.BasicAuth = map[string]string{}
+		}
+
+		t.BasicAuth[username] = password
+	}
+
+	return nil
+}
+
+func (t *HTTP) unmarshalCircuitBreaker(d *caddyfile.Dispenser) error {
+	var ratio string
+	if !d.AllArgs(&ratio) {
+		return d.ArgErr()
+	}
+
+	circuitBreaker, err := strconv.ParseFloat(ratio, 64)
+	if err != nil {
+		return d.ArgErr()
+	}
+
+	t.CircuitBreaker = &circuitBreaker
 
 	return nil
 }

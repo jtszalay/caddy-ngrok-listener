@@ -95,22 +95,38 @@ func (t *TLS) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return d.ArgErr()
 				}
 			case "allow":
-				if d.CountRemainingArgs() == 0 {
-					return d.ArgErr()
+				if err := t.unmarshalAllowCidr(d); err != nil {
+					return err
 				}
-
-				t.AllowCIDR = append(t.AllowCIDR, d.RemainingArgs()...)
 			case "deny":
-				if d.CountRemainingArgs() == 0 {
-					return d.ArgErr()
+				if err := t.unmarshalDenyCidr(d); err != nil {
+					return err
 				}
-
-				t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
 			default:
 				return d.ArgErr()
 			}
 		}
 	}
+
+	return nil
+}
+
+func (t *TLS) unmarshalAllowCidr(d *caddyfile.Dispenser) error {
+	if d.CountRemainingArgs() == 0 {
+		return d.ArgErr()
+	}
+
+	t.AllowCIDR = append(t.AllowCIDR, d.RemainingArgs()...)
+
+	return nil
+}
+
+func (t *TLS) unmarshalDenyCidr(d *caddyfile.Dispenser) error {
+	if d.CountRemainingArgs() == 0 {
+		return d.ArgErr()
+	}
+
+	t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
 
 	return nil
 }

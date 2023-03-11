@@ -33,7 +33,7 @@ type HTTP struct {
 	Scheme string `json:"scheme,omitempty"`
 
 	// the 5XX response ratio at which the ngrok edge will stop sending requests to this tunnel.
-	CircuitBreakerRatio *float64 `json:"circuitBreakerRatio,omitempty"`
+	CircuitBreaker *float64 `json:"circuitBreaker,omitempty"`
 
 	// enables gzip compression.
 	EnableCompression bool `json:"enableCompression,omitempty"`
@@ -81,8 +81,8 @@ func (t *HTTP) ProvisionOpts() error {
 		t.opts = append(t.opts, config.WithDenyCIDRString(t.DenyCIDR...))
 	}
 
-	if t.CircuitBreakerRatio != nil {
-		t.opts = append(t.opts, config.WithCircuitBreaker(*t.CircuitBreakerRatio))
+	if t.CircuitBreaker != nil {
+		t.opts = append(t.opts, config.WithCircuitBreaker(*t.CircuitBreaker))
 	}
 
 	if t.EnableCompression {
@@ -146,18 +146,18 @@ func (t *HTTP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
-			case "circuit_breaker_ratio":
+			case "circuit_breaker":
 				var ratio string
 				if !d.AllArgs(&ratio) {
 					return d.ArgErr()
 				}
 
-				circuitBreakerRatio, err := strconv.ParseFloat(ratio, 64);
+				circuitBreaker, err := strconv.ParseFloat(ratio, 64)
 				if err != nil {
 					return d.ArgErr()
 				}
-				
-				t.CircuitBreakerRatio = &circuitBreakerRatio
+
+				t.CircuitBreaker = &circuitBreaker
 			case "enable_compression":
 				t.EnableCompression = true
 			case "scheme":

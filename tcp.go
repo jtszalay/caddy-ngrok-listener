@@ -16,7 +16,7 @@ type TCP struct {
 	opts []config.TCPEndpointOption
 
 	// The remote TCP address to request for this edge
-	RemoteAddr string `json:"remoteAddress,omitempty"`
+	RemoteAddr string `json:"remoteAddr,omitempty"`
 
 	// opaque metadata string for this tunnel.
 	Metadata string `json:"metadata,omitempty"`
@@ -87,7 +87,7 @@ func (t *TCP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.AllArgs(&t.Metadata) {
 					return d.ArgErr()
 				}
-			case "remote_address":
+			case "remote_addr":
 				if !d.AllArgs(&t.RemoteAddr) {
 					return d.ArgErr()
 				}

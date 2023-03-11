@@ -47,7 +47,7 @@ Currently, the module does not support the extended ngrok options, e.g. allow/de
 					domain mydomain.ngrok.io
 					metadata bad8c1c0-8fce-11e4-b4a9-0800200c9a66
 					scheme http
-					circuit_breaker_ratio 0.7
+					circuit_breaker 0.7
 					enable_compression
 					enable_websocket_tcp_conversion
 					basicauth {

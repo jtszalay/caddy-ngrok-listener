@@ -1,6 +1,8 @@
 The following config options are not yet surfaced.
 
 ```golang
+
+// https://github.com/ngrok/ngrok-go/blob/main/session.go
 // WithProxyURL configures the session to connect to ngrok through an outbound
 // HTTP or SOCKS5 proxy. This parameter is ignored if you override the dialer
 // with [WithDialer].
@@ -42,6 +44,9 @@ func WithHeartbeatTolerance(tolerance time.Duration) ConnectOption
 // [heartbeat_interval parameter in the ngrok docs]: https://ngrok.com/docs/ngrok-agent/config#heartbeat_interval
 func WithHeartbeatInterval(interval time.Duration) ConnectOption 
 
+
+
+https://github.com/ngrok/ngrok-go/blob/main/config/http_headers.go
 // HTTP Headers to modify at the ngrok edge.
 type headers struct {
 	// Headers to add to requests or responses at the ngrok edge.
@@ -60,6 +65,8 @@ func WithRemoveResponseHeader(name string) HTTPEndpointOption
 
 
 
+// https://github.com/ngrok/ngrok-go/blob/main/config/mutual_tls.go
+
 type mutualTLSEndpointOption []*x509.Certificate
 
 // WithMutualTLSCA adds a list of [x509.Certificate]'s to use for mutual TLS
@@ -72,6 +79,7 @@ func WithMutualTLSCA(certs ...*x509.Certificate) interface {
 }
 
 
+// https://github.com/ngrok/ngrok-go/blob/main/config/oauth.go
 // oauthOptions configuration
 type oauthOptions struct {
 	// The OAuth provider to use
@@ -94,6 +102,9 @@ func WithOAuthScope(scope ...string) OAuthOption
 func WithOAuth(provider string, opts ...OAuthOption) HTTPEndpointOption
 
 
+
+
+// https://github.com/ngrok/ngrok-go/blob/main/config/oidc.go
 type oidcOptions struct {
 	IssuerURL    string
 	ClientID     string
@@ -117,7 +128,7 @@ func WithOIDC(issuerURL string, clientID string, clientSecret string, opts ...OI
 
 
 
-
+// https://github.com/ngrok/ngrok-go/blob/main/config/tls_termination.go
 // WithTermination sets the key and certificate in PEM format for TLS termination at the ngrok
 // edge.
 func WithTermination(certPEM, keyPEM []byte) TLSEndpointOption 
@@ -125,7 +136,7 @@ func WithTermination(certPEM, keyPEM []byte) TLSEndpointOption
 
 
 
-
+// https://github.com/ngrok/ngrok-go/blob/main/config/webhook_verification.go
 // Configuration for webhook verification.
 type webhookVerification struct {
 	// The webhook provider

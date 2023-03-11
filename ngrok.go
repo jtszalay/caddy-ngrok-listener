@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
-	ngrok_zap "golang.ngrok.com/ngrok/log/zap"
+	ngrokZap "golang.ngrok.com/ngrok/log/zap"
 )
 
 func init() {
@@ -58,11 +58,18 @@ func (n *Ngrok) Provision(ctx caddy.Context) error {
 	if n.TunnelRaw == nil {
 		n.TunnelRaw = json.RawMessage(`{"tunnel": "tcp"}`)
 	}
+
 	tmod, err := ctx.LoadModule(n, "TunnelRaw")
 	if err != nil {
 		return fmt.Errorf("loading ngrok tunnel module: %v", err)
 	}
-	n.tunnel = tmod.(Tunnel)
+
+	var ok bool
+	n.tunnel, ok = tmod.(Tunnel)
+
+	if !ok {
+		return fmt.Errorf("loading ngrok tunnel module: %v", err)
+	}
 
 	if repl, ok := ctx.Value(caddy.ReplacerCtxKey).(*caddy.Replacer); ok {
 		n.AuthToken = repl.ReplaceKnown(n.AuthToken, "")
@@ -72,8 +79,7 @@ func (n *Ngrok) Provision(ctx caddy.Context) error {
 }
 
 func (n *Ngrok) ProvisionOpts() error {
-
-	n.opts = append(n.opts, ngrok.WithLogger(ngrok_zap.NewLogger(n.l)))
+	n.opts = append(n.opts, ngrok.WithLogger(ngrokZap.NewLogger(n.l)))
 
 	if n.AuthToken == "" {
 		n.opts = append(n.opts, ngrok.WithAuthtokenFromEnv())
@@ -97,6 +103,7 @@ func (n *Ngrok) Validate() error {
 	if n.tunnel == nil {
 		return fmt.Errorf("tunnel is required")
 	}
+
 	return nil
 }
 
@@ -111,8 +118,7 @@ func (*Ngrok) CaddyModule() caddy.ModuleInfo {
 
 // WrapListener return an ngrok listener instead the listener passed by Caddy
 func (n *Ngrok) WrapListener(net.Listener) net.Listener {
-	err := n.ProvisionOpts()
-	if err != nil {
+	if err := n.ProvisionOpts(); err != nil {
 		panic(err)
 	}
 
@@ -124,7 +130,9 @@ func (n *Ngrok) WrapListener(net.Listener) net.Listener {
 	if err != nil {
 		panic(err)
 	}
+
 	n.l.Info("ngrok listening", zap.String("address", ln.Addr().String()))
+
 	return ln
 }
 
@@ -154,11 +162,14 @@ func (n *Ngrok) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.Args(&tunnelName) {
 					tunnelName = "tcp"
 				}
+
 				unm, err := caddyfile.UnmarshalModule(d, "caddy.listeners.ngrok.tunnels."+tunnelName)
 				if err != nil {
 					return err
 				}
+
 				tun, ok := unm.(Tunnel)
+
 				if !ok {
 					return d.Errf("module %s is not an ngrok tunnel; is %T", tunnelName, unm)
 				}
@@ -168,6 +179,7 @@ func (n *Ngrok) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		}
 	}
+
 	return nil
 }
 

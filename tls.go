@@ -1,8 +1,6 @@
 package ngroklistener
 
 import (
-	"context"
-
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
@@ -24,8 +22,13 @@ type TLS struct {
 	// opaque metadata string for this tunnel.
 	Metadata string `json:"metadata,omitempty"`
 
-	ctx context.Context
-	l   *zap.Logger
+	// Rejects connections that do not match the given CIDRs
+	AllowCIDR []string `json:"allowCidr,omitempty"`
+
+	// Rejects connections that match the given CIDRs and allows all other CIDRs.
+	DenyCIDR []string `json:"denyCidr,omitempty"`
+
+	l *zap.Logger
 }
 
 // CaddyModule implements caddy.Module
@@ -39,9 +42,9 @@ func (*TLS) CaddyModule() caddy.ModuleInfo {
 }
 
 // Provision implements caddy.Provisioner
-func (t *TLS) Provision(caddy.Context) error {
-	t.ctx = ctx
+func (t *TLS) Provision(ctx caddy.Context) error {
 	t.l = ctx.Logger()
+
 	return nil
 }
 
@@ -49,18 +52,28 @@ func (t *TLS) ProvisionOpts() error {
 	if t.Domain != "" {
 		t.opts = append(t.opts, config.WithDomain(t.Domain))
 	}
+
 	if t.Metadata != "" {
 		t.opts = append(t.opts, config.WithMetadata(t.Metadata))
 	}
+
+	if t.AllowCIDR != nil {
+		t.opts = append(t.opts, config.WithAllowCIDRString(t.AllowCIDR...))
+	}
+
+	if t.DenyCIDR != nil {
+		t.opts = append(t.opts, config.WithDenyCIDRString(t.DenyCIDR...))
+	}
+
 	return nil
 }
 
 // convert to ngrok's Tunnel type
 func (t *TLS) NgrokTunnel() config.Tunnel {
-	err := t.ProvisionOpts()
-	if err != nil {
+	if err := t.ProvisionOpts(); err != nil {
 		panic(err)
 	}
+
 	return config.TLSEndpoint(t.opts...)
 }
 
@@ -69,22 +82,36 @@ func (t *TLS) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		if d.NextArg() {
 			return d.ArgErr()
 		}
+
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			subdirective := d.Val()
 			switch subdirective {
 			case "domain":
 				if !d.AllArgs(&t.Domain) {
-					d.ArgErr()
+					return d.ArgErr()
 				}
 			case "metadata":
 				if !d.AllArgs(&t.Metadata) {
-					d.ArgErr()
+					return d.ArgErr()
 				}
+			case "allow":
+				if d.CountRemainingArgs() == 0 {
+					return d.ArgErr()
+				}
+
+				t.AllowCIDR = append(t.AllowCIDR, d.RemainingArgs()...)
+			case "deny":
+				if d.CountRemainingArgs() == 0 {
+					return d.ArgErr()
+				}
+
+				t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
 			default:
 				return d.ArgErr()
 			}
 		}
 	}
+
 	return nil
 }
 

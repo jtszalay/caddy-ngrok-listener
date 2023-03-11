@@ -1,8 +1,6 @@
 package ngroklistener
 
 import (
-	"context"
-
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
@@ -23,8 +21,7 @@ type Labeled struct {
 	// opaque metadata string for this tunnel.
 	Metadata string `json:"metadata,omitempty"`
 
-	ctx context.Context
-	l   *zap.Logger
+	l *zap.Logger
 }
 
 // CaddyModule implements caddy.Module
@@ -39,7 +36,6 @@ func (*Labeled) CaddyModule() caddy.ModuleInfo {
 
 // Provision implements caddy.Provisioner
 func (t *Labeled) Provision(ctx caddy.Context) error {
-	t.ctx = ctx
 	t.l = ctx.Logger()
 
 	return nil
@@ -60,8 +56,7 @@ func (t *Labeled) ProvisionOpts() error {
 
 // convert to ngrok's Tunnel type
 func (t *Labeled) NgrokTunnel() config.Tunnel {
-	err := t.ProvisionOpts()
-	if err != nil {
+	if err := t.ProvisionOpts(); err != nil {
 		panic(err)
 	}
 
@@ -73,12 +68,13 @@ func (t *Labeled) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		if d.NextArg() {
 			return d.ArgErr()
 		}
+
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			subdirective := d.Val()
 			switch subdirective {
 			case "metadata":
 				if !d.AllArgs(&t.Metadata) {
-					d.ArgErr()
+					return d.ArgErr()
 				}
 			case "labels":
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
@@ -86,21 +82,25 @@ func (t *Labeled) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					if label == "}" || label == "{" {
 						continue
 					}
+
 					var labelValue string
+
 					if !d.AllArgs(&labelValue) {
 						return d.ArgErr()
 					}
+
 					if t.Labels == nil {
 						t.Labels = map[string]string{}
 					}
+
 					t.Labels[label] = labelValue
 				}
 			default:
 				return d.ArgErr()
-
 			}
 		}
 	}
+
 	return nil
 }
 

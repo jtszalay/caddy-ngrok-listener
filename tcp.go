@@ -1,8 +1,6 @@
 package ngroklistener
 
 import (
-	"context"
-
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
@@ -18,18 +16,22 @@ type TCP struct {
 	opts []config.TCPEndpointOption
 
 	// The remote TCP address to request for this edge
-	RemoteAddr string `json:"remote_address,omitempty"`
+	RemoteAddr string `json:"remoteAddress,omitempty"`
 
 	// opaque metadata string for this tunnel.
 	Metadata string `json:"metadata,omitempty"`
 
-	ctx context.Context
-	l   *zap.Logger
+	// Rejects connections that do not match the given CIDRs
+	AllowCIDR []string `json:"allowCidr,omitempty"`
+
+	// Rejects connections that match the given CIDRs and allows all other CIDRs.
+	DenyCIDR []string `json:"denyCidr,omitempty"`
+
+	l *zap.Logger
 }
 
 // Provision implements caddy.Provisioner
-func (t *TCP) Provision(caddy.Context) error {
-	t.ctx = ctx
+func (t *TCP) Provision(ctx caddy.Context) error {
 	t.l = ctx.Logger()
 
 	return nil
@@ -37,18 +39,28 @@ func (t *TCP) Provision(caddy.Context) error {
 
 func (t *TCP) ProvisionOpts() error {
 	t.opts = append(t.opts, config.WithRemoteAddr(t.RemoteAddr))
+
 	if t.Metadata != "" {
 		t.opts = append(t.opts, config.WithMetadata(t.Metadata))
 	}
+
+	if t.AllowCIDR != nil {
+		t.opts = append(t.opts, config.WithAllowCIDRString(t.AllowCIDR...))
+	}
+
+	if t.DenyCIDR != nil {
+		t.opts = append(t.opts, config.WithDenyCIDRString(t.DenyCIDR...))
+	}
+
 	return nil
 }
 
 // convert to ngrok's Tunnel type
 func (t *TCP) NgrokTunnel() config.Tunnel {
-	err := t.ProvisionOpts()
-	if err != nil {
+	if err := t.ProvisionOpts(); err != nil {
 		panic(err)
 	}
+
 	return config.TCPEndpoint(t.opts...)
 }
 
@@ -67,22 +79,36 @@ func (t *TCP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		if d.NextArg() {
 			return d.ArgErr()
 		}
+
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			subdirective := d.Val()
 			switch subdirective {
 			case "metadata":
 				if !d.AllArgs(&t.Metadata) {
-					d.ArgErr()
+					return d.ArgErr()
 				}
 			case "remote_address":
 				if !d.AllArgs(&t.RemoteAddr) {
-					d.ArgErr()
+					return d.ArgErr()
 				}
+			case "allow":
+				if d.CountRemainingArgs() == 0 {
+					return d.ArgErr()
+				}
+
+				t.AllowCIDR = append(t.AllowCIDR, d.RemainingArgs()...)
+			case "deny":
+				if d.CountRemainingArgs() == 0 {
+					return d.ArgErr()
+				}
+
+				t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
 			default:
 				return d.ArgErr()
 			}
 		}
 	}
+
 	return nil
 }
 

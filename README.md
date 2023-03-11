@@ -20,6 +20,41 @@ Currently, the module does not support the extended ngrok options, e.g. allow/de
 			ngrok {
 				auth_token $NGROK_AUTH_TOKEN
 				tunnel http {
+
+				}
+			}
+		}
+	}
+	servers :8080 {
+		listener_wrappers {
+			ngrok {
+				auth_token $NGROK_AUTH_TOKEN
+				tunnel labeled {
+					labels {
+						edge edghts_LABEL
+					}
+				}
+			}
+		}
+	}
+	servers :8081 {
+		listener_wrappers {
+			ngrok {
+				auth_token $NGROK_AUTH_TOKEN
+				tunnel http {
+					allow <cidr> ...
+					deny <cidr> ...
+					domain mydomain.ngrok.io
+					metadata bad8c1c0-8fce-11e4-b4a9-0800200c9a66
+					scheme http
+					circuit_breaker_ratio 0.7
+					enable_compression
+					enable_websocket_tcp_conversion
+					basicauth {
+						test passw0rd
+						test2 password
+						user hellohello
+					}
 				}
 			}
 		}
@@ -28,5 +63,11 @@ Currently, the module does not support the extended ngrok options, e.g. allow/de
 :80 {
 	root * /path/to/site/root
 	file_server
+}
+:8080 {
+	reverse_proxy 127.0.0.1:5000
+}
+:8081 {
+	reverse_proxy 127.0.0.1:9090
 }
 ```

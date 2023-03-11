@@ -15,10 +15,13 @@ func init() {
 
 // ngrok TCP tunnel
 type TCP struct {
+	opts []config.TCPEndpointOption
+
 	// The remote TCP address to request for this edge
 	RemoteAddr string `json:"remote_address,omitempty"`
 
-	opts []config.TCPEndpointOption
+	// opaque metadata string for this tunnel.
+	Metadata string `json:"metadata,omitempty"`
 
 	ctx context.Context
 	l   *zap.Logger
@@ -34,6 +37,9 @@ func (t *TCP) Provision(caddy.Context) error {
 
 func (t *TCP) ProvisionOpts() error {
 	t.opts = append(t.opts, config.WithRemoteAddr(t.RemoteAddr))
+	if t.Metadata != "" {
+		t.opts = append(t.opts, config.WithMetadata(t.Metadata))
+	}
 	return nil
 }
 
@@ -64,6 +70,10 @@ func (t *TCP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			subdirective := d.Val()
 			switch subdirective {
+			case "metadata":
+				if !d.AllArgs(&t.Metadata) {
+					d.ArgErr()
+				}
 			case "remote_address":
 				if !d.AllArgs(&t.RemoteAddr) {
 					d.ArgErr()

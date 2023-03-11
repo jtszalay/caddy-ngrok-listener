@@ -21,6 +21,9 @@ type TLS struct {
 	// the domain for this edge.
 	Domain string `json:"domain,omitempty"`
 
+	// opaque metadata string for this tunnel.
+	Metadata string `json:"metadata,omitempty"`
+
 	ctx context.Context
 	l   *zap.Logger
 }
@@ -46,6 +49,9 @@ func (t *TLS) ProvisionOpts() error {
 	if t.Domain != "" {
 		t.opts = append(t.opts, config.WithDomain(t.Domain))
 	}
+	if t.Metadata != "" {
+		t.opts = append(t.opts, config.WithMetadata(t.Metadata))
+	}
 	return nil
 }
 
@@ -68,6 +74,10 @@ func (t *TLS) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			switch subdirective {
 			case "domain":
 				if !d.AllArgs(&t.Domain) {
+					d.ArgErr()
+				}
+			case "metadata":
+				if !d.AllArgs(&t.Metadata) {
 					d.ArgErr()
 				}
 			default:

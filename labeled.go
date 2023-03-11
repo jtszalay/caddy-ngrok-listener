@@ -20,6 +20,9 @@ type Labeled struct {
 	// A map of label, value pairs for this tunnel.
 	Labels map[string]string `json:"labels,omitempty"`
 
+	// opaque metadata string for this tunnel.
+	Metadata string `json:"metadata,omitempty"`
+
 	ctx context.Context
 	l   *zap.Logger
 }
@@ -48,6 +51,10 @@ func (t *Labeled) ProvisionOpts() error {
 		t.l.Info("applying label", zap.String("label", label), zap.String("value", value))
 	}
 
+	if t.Metadata != "" {
+		t.opts = append(t.opts, config.WithMetadata(t.Metadata))
+	}
+
 	return nil
 }
 
@@ -69,6 +76,10 @@ func (t *Labeled) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			subdirective := d.Val()
 			switch subdirective {
+			case "metadata":
+				if !d.AllArgs(&t.Metadata) {
+					d.ArgErr()
+				}
 			case "labels":
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
 					label := d.Val()

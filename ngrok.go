@@ -25,7 +25,7 @@ type Tunnel interface {
 
 // Ngrok is a `listener_wrapper` whose address is an ngrok-ingress address
 type Ngrok struct {
-	ctx context.Context
+	opts []ngrok.ConnectOption
 
 	// The user's ngrok authentication token
 	AuthToken string `json:"authtoken,omitempty"`
@@ -46,9 +46,8 @@ type Ngrok struct {
 
 	tunnel Tunnel
 
-	opts []ngrok.ConnectOption
-
-	l *zap.Logger
+	ctx context.Context
+	l   *zap.Logger
 }
 
 // Provisions the ngrok listener wrapper

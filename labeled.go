@@ -15,14 +15,13 @@ func init() {
 
 // ngrok Labeled Tunnel
 type Labeled struct {
-	ctx context.Context
-
-	opts   []config.LabeledTunnelOption
+	opts []config.LabeledTunnelOption
 
 	// A map of label, value pairs for this tunnel.
 	Labels map[string]string `json:"labels,omitempty"`
 
-	l *zap.Logger
+	ctx context.Context
+	l   *zap.Logger
 }
 
 // CaddyModule implements caddy.Module
@@ -36,21 +35,30 @@ func (*Labeled) CaddyModule() caddy.ModuleInfo {
 }
 
 // Provision implements caddy.Provisioner
-func (lt *Labeled) Provision(ctx caddy.Context) error {
-	lt.ctx = ctx
-	lt.l = ctx.Logger()
+func (t *Labeled) Provision(ctx caddy.Context) error {
+	t.ctx = ctx
+	t.l = ctx.Logger()
 
-	for label, value := range lt.Labels {
-		lt.opts = append(lt.opts, config.WithLabel(label, value))
-		lt.l.Info("applying label", zap.String("label", label), zap.String("value", value))
+	return nil
+}
+
+func (t *Labeled) ProvisionOpts() error {
+	for label, value := range t.Labels {
+		t.opts = append(t.opts, config.WithLabel(label, value))
+		t.l.Info("applying label", zap.String("label", label), zap.String("value", value))
 	}
 
 	return nil
 }
 
 // convert to ngrok's Tunnel type
-func (lt *Labeled) NgrokTunnel() config.Tunnel {
-	return config.LabeledTunnel(lt.opts...)
+func (t *Labeled) NgrokTunnel() config.Tunnel {
+	err := t.ProvisionOpts()
+	if err != nil {
+		panic(err)
+	}
+
+	return config.LabeledTunnel(t.opts...)
 }
 
 func (t *Labeled) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
@@ -58,22 +66,23 @@ func (t *Labeled) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		if d.NextArg() {
 			return d.ArgErr()
 		}
-		for d.NextBlock(0) {
-			switch d.Val() {
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
+			subdirective := d.Val()
+			switch subdirective {
 			case "labels":
 				for nesting := d.Nesting(); d.NextBlock(nesting); {
-					directive := d.Val()
-					if directive == "}" || directive == "{" {
+					label := d.Val()
+					if label == "}" || label == "{" {
 						continue
 					}
-					args := d.RemainingArgs()
-					if len(args) != 1 {
+					var labelValue string
+					if !d.AllArgs(&labelValue) {
 						return d.ArgErr()
 					}
 					if t.Labels == nil {
 						t.Labels = map[string]string{}
 					}
-					t.Labels[directive] = args[0]
+					t.Labels[label] = labelValue
 				}
 			default:
 				return d.ArgErr()

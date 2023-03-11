@@ -1,8 +1,11 @@
 package ngroklistener
 
 import (
+	"context"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
+	"go.uber.org/zap"
 	"golang.ngrok.com/ngrok/config"
 )
 
@@ -16,16 +19,30 @@ type TCP struct {
 	RemoteAddr string `json:"remote_address,omitempty"`
 
 	opts []config.TCPEndpointOption
+
+	ctx context.Context
+	l   *zap.Logger
 }
 
 // Provision implements caddy.Provisioner
 func (t *TCP) Provision(caddy.Context) error {
+	t.ctx = ctx
+	t.l = ctx.Logger()
+
+	return nil
+}
+
+func (t *TCP) ProvisionOpts() error {
 	t.opts = append(t.opts, config.WithRemoteAddr(t.RemoteAddr))
 	return nil
 }
 
 // convert to ngrok's Tunnel type
 func (t *TCP) NgrokTunnel() config.Tunnel {
+	err := t.ProvisionOpts()
+	if err != nil {
+		panic(err)
+	}
 	return config.TCPEndpoint(t.opts...)
 }
 
@@ -44,15 +61,13 @@ func (t *TCP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 		if d.NextArg() {
 			return d.ArgErr()
 		}
-		for d.NextBlock(0) {
+		for nesting := d.Nesting(); d.NextBlock(nesting); {
 			subdirective := d.Val()
 			switch subdirective {
 			case "remote_address":
-				var remote_address string
-				if !d.Args(&remote_address) {
+				if !d.AllArgs(&t.RemoteAddr) {
 					d.ArgErr()
 				}
-				t.RemoteAddr = remote_address
 			default:
 				return d.ArgErr()
 			}
@@ -61,7 +76,9 @@ func (t *TCP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
-var _ caddy.Module = (*TCP)(nil)
-var _ Tunnel = (*TCP)(nil)
-var _ caddy.Provisioner = (*TCP)(nil)
-var _ caddyfile.Unmarshaler = (*TCP)(nil)
+var (
+	_ caddy.Module          = (*TCP)(nil)
+	_ Tunnel                = (*TCP)(nil)
+	_ caddy.Provisioner     = (*TCP)(nil)
+	_ caddyfile.Unmarshaler = (*TCP)(nil)
+)

@@ -1,9 +1,5 @@
 * Replacers should be used where appropriate. 
 
-
-* panic: failed to start tunnel: Each tunnel must specify either a protocol or labels, but neither was set.
-
-
 * The following config options are not yet surfaced.
 
 ```golang
@@ -131,4 +127,59 @@ type webhookVerification struct {
 }
 // WithWebhookVerification configures webhook vericiation for this edge.
 func WithWebhookVerification(provider string, secret string) HTTPEndpointOption
+```
+
+
+
+
+Future adds
+```golang
+
+// WithConnectHandler configures a function which is called each time the ngrok
+// [Session] successfully connects to the ngrok service. Use this option to
+// receive events when ngrok successfully reconnects a [Session] that was
+// disconnected because of a network failure.
+func WithConnectHandler(handler SessionConnectHandler) ConnectOption {
+	return func(cfg *connectConfig) {
+		cfg.ConnectHandler = handler
+	}
+}
+
+// WithDisconnectHandler configures a function which is called each time the
+// ngrok [Session] disconnects from the ngrok service. Use this option to detect
+// when the ngrok session has gone temporarily offline.
+func WithDisconnectHandler(handler SessionDisconnectHandler) ConnectOption {
+	return func(cfg *connectConfig) {
+		cfg.DisconnectHandler = handler
+	}
+}
+
+// WithHeartbeatHandler configures a function which is called each time the
+// [Session] successfully heartbeats the ngrok service. The callback receives
+// the latency of the round trip time from initiating the heartbeat to
+// receiving an acknowledgement back from the ngrok service.
+func WithHeartbeatHandler(handler SessionHeartbeatHandler) ConnectOption {
+	return func(cfg *connectConfig) {
+		cfg.HeartbeatHandler = handler
+	}
+}
+
+// WithStopHandler configures a function which is called when the ngrok service
+// requests that this [Session] stops. Your application may choose to interpret
+// this callback as a request to terminate the [Session] or the entire process.
+//
+// Errors returned by this function will be visible to the ngrok dashboard or
+// API as the response to the Stop operation.
+//
+// Do not block inside this callback. It will cause the Dashboard or API stop
+// operation to hang. Do not call [Session].Close or [os.Exit] inside this
+// callback, it will also cause the operation to hang.
+//
+// Instead, either return an error or if you intend to Stop, spawn a goroutine
+// to asynchronously call [Session].Close or [os.Exit].
+func WithStopHandler(handler ServerCommandHandler) ConnectOption {
+	return func(cfg *connectConfig) {
+		cfg.StopHandler = handler
+	}
+}
 ```

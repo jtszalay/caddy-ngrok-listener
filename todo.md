@@ -1,6 +1,9 @@
 * Replacers should be used where appropriate. 
 
 
+* panic: failed to start tunnel: Each tunnel must specify either a protocol or labels, but neither was set.
+
+
 * The following config options are not yet surfaced.
 
 ```golang

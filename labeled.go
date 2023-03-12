@@ -76,7 +76,7 @@ func (t *Labeled) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.AllArgs(&t.Metadata) {
 					return d.ArgErr()
 				}
-			case "labels":
+			case "label":
 				if err := t.unmarshalLabels(d); err != nil {
 					return err
 				}
@@ -90,20 +90,32 @@ func (t *Labeled) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 }
 
 func (t *Labeled) unmarshalLabels(d *caddyfile.Dispenser) error {
-	for nesting := d.Nesting(); d.NextBlock(nesting); {
-		label := d.Val()
-		if label == "}" || label == "{" {
-			continue
-		}
+	var (
+		label      string
+		labelValue string
+	)
 
-		var labelValue string
+	if t.Labels == nil {
+		t.Labels = map[string]string{}
+	}
 
-		if !d.AllArgs(&labelValue) {
+	label = d.Val()
+
+	if d.CountRemainingArgs() != 0 { // label is defined inline
+		if !d.AllArgs(&label, &labelValue) {
 			return d.ArgErr()
 		}
 
-		if t.Labels == nil {
-			t.Labels = map[string]string{}
+		t.Labels[label] = labelValue
+		
+		return nil
+	}
+
+	for nesting := d.Nesting(); d.NextBlock(nesting); {
+		label := d.Val()
+
+		if !d.AllArgs(&labelValue) {
+			return d.ArgErr()
 		}
 
 		t.Labels[label] = labelValue

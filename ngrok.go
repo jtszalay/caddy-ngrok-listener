@@ -288,7 +288,7 @@ func (n *Ngrok) unmarshalTunnel(d *caddyfile.Dispenser) error {
 	if !ok {
 		return d.Errf("module %s is not an ngrok tunnel; is %T", tunnelName, unm)
 	}
-	
+
 	n.TunnelRaw = caddyconfig.JSONModuleObject(tun, "type", tunnelName, nil)
 
 	return nil

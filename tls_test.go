@@ -71,7 +71,7 @@ func TestParseTLS(t *testing.T) {
 			} else if test.expected.Metadata != tun.Metadata {
 				t.Errorf("Test %v: Created TLS (\n%#v\n) does not match expected (\n%#v\n)", i, tun.Metadata, test.expected.Metadata)
 			} else if test.expected.Domain != tun.Domain {
-					t.Errorf("Test %v: Created TLS (\n%#v\n) does not match expected (\n%#v\n)", i, tun.Domain, test.expected.Domain)
+				t.Errorf("Test %v: Created TLS (\n%#v\n) does not match expected (\n%#v\n)", i, tun.Domain, test.expected.Domain)
 			} else if !reflect.DeepEqual(test.expected.AllowCIDR, tun.AllowCIDR) {
 				t.Errorf("Test %v: Created TLS (\n%#v\n) does not match expected (\n%#v\n)", i, tun.AllowCIDR, test.expected.AllowCIDR)
 			} else if !reflect.DeepEqual(test.expected.DenyCIDR, tun.DenyCIDR) {

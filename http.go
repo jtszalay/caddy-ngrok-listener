@@ -131,8 +131,49 @@ func (t *HTTP) DoReplace() error {
 		*field = actual
 	}
 
-	// TODO: replacements in allow and deny
-	// TODO: replacements in basicauth
+	replacedAllowCIDR := make([]string, len(t.AllowCIDR))
+
+	for index, cidr := range t.AllowCIDR {
+		actual, err := repl.ReplaceOrErr(cidr, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		replacedAllowCIDR[index] = actual
+	}
+
+	t.AllowCIDR = replacedAllowCIDR
+
+	replacedDenyCIDR := make([]string, len(t.DenyCIDR))
+
+	for index, cidr := range t.DenyCIDR {
+		actual, err := repl.ReplaceOrErr(cidr, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		replacedDenyCIDR[index] = actual
+	}
+
+	t.DenyCIDR = replacedDenyCIDR
+
+	replacedBasicAuth := make(map[string]string, len(t.BasicAuth))
+
+	for username, password := range t.BasicAuth {
+		actualUsername, err := repl.ReplaceOrErr(username, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		actualPassword, err := repl.ReplaceOrErr(password, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		replacedBasicAuth[actualUsername] = actualPassword
+	}
+
+	t.BasicAuth = replacedBasicAuth
 
 	return nil
 }

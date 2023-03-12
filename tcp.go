@@ -77,7 +77,31 @@ func (t *TCP) DoReplace() error {
 		*field = actual
 	}
 
-	// TODO: replacements in allow and deny
+	replacedAllowCIDR := make([]string, len(t.AllowCIDR))
+
+	for index, cidr := range t.AllowCIDR {
+		actual, err := repl.ReplaceOrErr(cidr, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		replacedAllowCIDR[index] = actual
+	}
+
+	t.AllowCIDR = replacedAllowCIDR
+
+	replacedDenyCIDR := make([]string, len(t.DenyCIDR))
+
+	for index, cidr := range t.DenyCIDR {
+		actual, err := repl.ReplaceOrErr(cidr, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		replacedDenyCIDR[index] = actual
+	}
+
+	t.DenyCIDR = replacedDenyCIDR
 
 	return nil
 }

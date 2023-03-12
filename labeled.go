@@ -1,6 +1,8 @@
 package ngroklistener
 
 import (
+	"fmt"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
@@ -49,6 +51,15 @@ func (t *Labeled) ProvisionOpts() error {
 
 	if t.Metadata != "" {
 		t.opts = append(t.opts, config.WithMetadata(t.Metadata))
+	}
+
+	return nil
+}
+
+// Validate implements caddy.Validator.
+func (t *Labeled) Validate() error {
+	if t.Labels == nil || len(t.Labels) == 0 {
+		return fmt.Errorf("a label is required for labeled tunnels")
 	}
 
 	return nil
@@ -107,7 +118,7 @@ func (t *Labeled) unmarshalLabels(d *caddyfile.Dispenser) error {
 		}
 
 		t.Labels[label] = labelValue
-		
+
 		return nil
 	}
 
@@ -128,5 +139,6 @@ var (
 	_ caddy.Module          = (*Labeled)(nil)
 	_ Tunnel                = (*Labeled)(nil)
 	_ caddy.Provisioner     = (*Labeled)(nil)
+	_ caddy.Validator       = (*Labeled)(nil)
 	_ caddyfile.Unmarshaler = (*Labeled)(nil)
 )

@@ -1,6 +1,8 @@
 package ngroklistener
 
 import (
+	"fmt"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
@@ -45,6 +47,11 @@ func (*TLS) CaddyModule() caddy.ModuleInfo {
 func (t *TLS) Provision(ctx caddy.Context) error {
 	t.l = ctx.Logger()
 
+	err := t.DoReplace()
+	if err != nil {
+		return fmt.Errorf("loading doing replacements: %v", err)
+	}
+
 	return nil
 }
 
@@ -64,6 +71,27 @@ func (t *TLS) ProvisionOpts() error {
 	if t.DenyCIDR != nil {
 		t.opts = append(t.opts, config.WithDenyCIDRString(t.DenyCIDR...))
 	}
+
+	return nil
+}
+
+func (t *TLS) DoReplace() error {
+	repl := caddy.NewReplacer()
+	replaceableFields := []*string{
+		&t.Metadata,
+		&t.Domain,
+	}
+
+	for _, field := range replaceableFields {
+		actual, err := repl.ReplaceOrErr(*field, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		*field = actual
+	}
+
+	// TODO: replacements in allow and deny
 
 	return nil
 }

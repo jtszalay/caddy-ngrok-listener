@@ -95,6 +95,11 @@ func (n *Ngrok) Provision(ctx caddy.Context) error {
 		n.AuthToken = repl.ReplaceKnown(n.AuthToken, "")
 	}
 
+	err = n.DoReplace()
+	if err != nil {
+		return fmt.Errorf("loading doing replacements: %v", err)
+	}
+
 	return nil
 }
 
@@ -125,6 +130,27 @@ func (n *Ngrok) ProvisionOpts() error {
 
 	if n.HeartbeatTolerance != 0 {
 		n.opts = append(n.opts, ngrok.WithHeartbeatTolerance(n.HeartbeatTolerance))
+	}
+
+	return nil
+}
+
+func (n *Ngrok) DoReplace() error {
+	repl := caddy.NewReplacer()
+	replaceableFields := []*string{
+		&n.AuthToken,
+		&n.Metadata,
+		&n.Region,
+		&n.Server,
+	}
+
+	for _, field := range replaceableFields {
+		actual, err := repl.ReplaceOrErr(*field, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		*field = actual
 	}
 
 	return nil

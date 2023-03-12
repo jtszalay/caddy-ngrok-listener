@@ -1,6 +1,8 @@
 package ngroklistener
 
 import (
+	"fmt"
+
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
 	"go.uber.org/zap"
@@ -34,6 +36,11 @@ type TCP struct {
 func (t *TCP) Provision(ctx caddy.Context) error {
 	t.l = ctx.Logger()
 
+	err := t.DoReplace()
+	if err != nil {
+		return fmt.Errorf("loading doing replacements: %v", err)
+	}
+
 	return nil
 }
 
@@ -51,6 +58,26 @@ func (t *TCP) ProvisionOpts() error {
 	if t.DenyCIDR != nil {
 		t.opts = append(t.opts, config.WithDenyCIDRString(t.DenyCIDR...))
 	}
+
+	return nil
+}
+
+func (t *TCP) DoReplace() error {
+	repl := caddy.NewReplacer()
+	replaceableFields := []*string{
+		&t.Metadata,
+	}
+
+	for _, field := range replaceableFields {
+		actual, err := repl.ReplaceOrErr(*field, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		*field = actual
+	}
+
+	// TODO: replacements in allow and deny
 
 	return nil
 }

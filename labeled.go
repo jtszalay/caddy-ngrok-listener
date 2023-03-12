@@ -40,6 +40,11 @@ func (*Labeled) CaddyModule() caddy.ModuleInfo {
 func (t *Labeled) Provision(ctx caddy.Context) error {
 	t.l = ctx.Logger()
 
+	err := t.DoReplace()
+	if err != nil {
+		return fmt.Errorf("loading doing replacements: %v", err)
+	}
+
 	return nil
 }
 
@@ -53,6 +58,25 @@ func (t *Labeled) ProvisionOpts() error {
 		t.opts = append(t.opts, config.WithMetadata(t.Metadata))
 	}
 
+	return nil
+}
+
+func (t *Labeled) DoReplace() error {
+	repl := caddy.NewReplacer()
+	replaceableFields := []*string{
+		&t.Metadata,
+	}
+
+	for _, field := range replaceableFields {
+		actual, err := repl.ReplaceOrErr(*field, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		*field = actual
+	}
+
+	// TODO: Labels need to be replaceable
 	return nil
 }
 

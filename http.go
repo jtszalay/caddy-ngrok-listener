@@ -1,6 +1,7 @@
 package ngroklistener
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/caddyserver/caddy/v2"
@@ -61,6 +62,11 @@ func (*HTTP) CaddyModule() caddy.ModuleInfo {
 func (t *HTTP) Provision(ctx caddy.Context) error {
 	t.l = ctx.Logger()
 
+	err := t.DoReplace()
+	if err != nil {
+		return fmt.Errorf("loading doing replacements: %v", err)
+	}
+
 	return nil
 }
 
@@ -104,6 +110,29 @@ func (t *HTTP) ProvisionOpts() error {
 	for username, password := range t.BasicAuth {
 		t.opts = append(t.opts, config.WithBasicAuth(username, password))
 	}
+
+	return nil
+}
+
+func (t *HTTP) DoReplace() error {
+	repl := caddy.NewReplacer()
+	replaceableFields := []*string{
+		&t.Metadata,
+		&t.Domain,
+		&t.Scheme,
+	}
+
+	for _, field := range replaceableFields {
+		actual, err := repl.ReplaceOrErr(*field, false, true)
+		if err != nil {
+			return fmt.Errorf("error replacing fields: %v", err)
+		}
+
+		*field = actual
+	}
+
+	// TODO: replacements in allow and deny
+	// TODO: replacements in basicauth
 
 	return nil
 }

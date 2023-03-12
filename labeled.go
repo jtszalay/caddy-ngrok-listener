@@ -122,7 +122,7 @@ func (t *Labeled) unmarshalLabels(d *caddyfile.Dispenser) error {
 		return nil
 	}
 
-	for nesting := d.Nesting(); d.NextBlock(nesting); {
+	for nesting := d.Nesting(); d.NextBlock(nesting); { // block of labels
 		label := d.Val()
 
 		if !d.AllArgs(&labelValue) {

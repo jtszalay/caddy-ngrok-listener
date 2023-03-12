@@ -222,13 +222,39 @@ func (t *HTTP) unmarshalDenyCidr(d *caddyfile.Dispenser) error {
 }
 
 func (t *HTTP) unmarshalBasicAuth(d *caddyfile.Dispenser) error {
-	for nesting := d.Nesting(); d.NextBlock(nesting); {
-		username := d.Val()
-		if username == "}" || username == "{" {
-			continue
+	var (
+		username string
+		password string
+	)
+
+	if t.BasicAuth == nil {
+		t.BasicAuth = map[string]string{}
+	}
+
+	minLenPassword := 8
+
+	username = d.Val()
+
+	if d.CountRemainingArgs() != 0 { // basicauth is defined inline
+		if !d.AllArgs(&username, &password) {
+			return d.ArgErr()
 		}
 
-		var password string
+		if username == "" || password == "" {
+			return d.Err("username and password cannot be empty or missing")
+		}
+
+		if len(password) < minLenPassword {
+			return d.Err("password must be at least eight characters.")
+		}
+
+		t.BasicAuth[username] = password
+
+		return nil
+	}
+
+	for nesting := d.Nesting(); d.NextBlock(nesting); { // block of basicauth
+		username := d.Val()
 
 		if !d.AllArgs(&password) {
 			return d.ArgErr()
@@ -238,13 +264,8 @@ func (t *HTTP) unmarshalBasicAuth(d *caddyfile.Dispenser) error {
 			return d.Err("username and password cannot be empty or missing")
 		}
 
-		minLenPassword := 8
 		if len(password) < minLenPassword {
 			return d.Err("password must be at least eight characters.")
-		}
-
-		if t.BasicAuth == nil {
-			t.BasicAuth = map[string]string{}
 		}
 
 		t.BasicAuth[username] = password

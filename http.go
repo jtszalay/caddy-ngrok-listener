@@ -147,13 +147,17 @@ func (t *HTTP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 					return err
 				}
 			case "enable_compression":
-				t.EnableCompression = true
+				if err := t.unmarshalEnableCompression(d); err != nil {
+					return err
+				}
 			case "scheme":
 				if !d.AllArgs(&t.Scheme) {
 					return d.ArgErr()
 				}
 			case "enable_websocket_tcp_conversion":
-				t.EnableWebsocketTCPConversion = true
+				if err := t.unmarshalEnableWebsocketTCPConversion(d); err != nil {
+					return err
+				}
 			case "basicauth":
 				if err := t.unmarshalBasicAuth(d); err != nil {
 					return err
@@ -161,6 +165,36 @@ func (t *HTTP) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			default:
 				return d.ArgErr()
 			}
+		}
+	}
+
+	return nil
+}
+
+func (t *HTTP) unmarshalEnableWebsocketTCPConversion(d *caddyfile.Dispenser) error {
+	var value string
+	if !d.Args(&value) { // no arg default is true
+		t.EnableWebsocketTCPConversion = true
+	} else { // arg was given check it
+		var err error
+		t.EnableWebsocketTCPConversion, err = strconv.ParseBool(value)
+		if err != nil {
+			return d.Errf(`parsing enable_websocket_tcp_conversion value %+v: %w`, value, err)
+		}
+	}
+
+	return nil
+}
+
+func (t *HTTP) unmarshalEnableCompression(d *caddyfile.Dispenser) error {
+	var value string
+	if !d.Args(&value) { // no arg default is true
+		t.EnableCompression = true
+	} else { // arg was given check it
+		var err error
+		t.EnableCompression, err = strconv.ParseBool(value)
+		if err != nil {
+			return d.Errf(`parsing enable_compression value %+v: %w`, value, err)
 		}
 	}
 

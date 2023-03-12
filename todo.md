@@ -15,14 +15,7 @@
 // [proxy url paramter in the ngrok docs]: https://ngrok.com/docs/ngrok-agent/config#proxy_url
 func WithProxyURL(url *url.URL) ConnectOption
 
-// WithServer configures the network address to dial to connect to the ngrok
-// service. Use this option only if you are connecting to a custom agent
-// ingress.
-//
-// See the [server_addr parameter in the ngrok docs] for additional details.
-//
-// [server_addr parameter in the ngrok docs]: https://ngrok.com/docs/ngrok-agent/config#server_addr
-func WithServer(addr string) ConnectOption
+
 // WithCA configures the CAs used to validate the TLS certificate returned by
 // the ngrok service while establishing the session. Use this option only if
 // you are connecting through a man-in-the-middle or deep packet inspection
@@ -32,20 +25,6 @@ func WithServer(addr string) ConnectOption
 //
 // [root_cas parameter in the ngrok docs]: https://ngrok.com/docs/ngrok-agent/config#root_cas
 func WithCA(pool *x509.CertPool) ConnectOption
-// WithHeartbeatTolerance configures the duration to wait for a response to a heartbeat
-// before assuming the session connection is dead and attempting to reconnect.
-//
-// See the [heartbeat_tolerance parameter in the ngrok docs] for additional details.
-//
-// [heartbeat_tolerance parameter in the ngrok docs]: https://ngrok.com/docs/ngrok-agent/config#heartbeat_tolerance
-func WithHeartbeatTolerance(tolerance time.Duration) ConnectOption
-// WithHeartbeatInterval configures how often the session will send heartbeat
-// messages to the ngrok service to check session liveness.
-//
-// See the [heartbeat_interval parameter in the ngrok docs] for additional details.
-//
-// [heartbeat_interval parameter in the ngrok docs]: https://ngrok.com/docs/ngrok-agent/config#heartbeat_interval
-func WithHeartbeatInterval(interval time.Duration) ConnectOption 
 
 
 

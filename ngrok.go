@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig"
@@ -39,10 +40,29 @@ type Ngrok struct {
 	// sessions. We suggest encoding the value in a structured format like JSON.
 	Metadata string `json:"metadata,omitempty"`
 
-	// WithRegion configures the session to connect to a specific ngrok region.
+	// Region configures the session to connect to a specific ngrok region.
 	// If unspecified, ngrok will connect to the fastest region, which is usually what you want.
 	// The [full list of ngrok regions] can be found in the ngrok documentation.
 	Region string `json:"region,omitempty"`
+
+	// Server configures the network address to dial to connect to the ngrok
+	// service. Use this option only if you are connecting to a custom agent
+	// ingress.
+	//
+	// See the [server_addr parameter in the ngrok docs] for additional details.
+	Server string `json:"server,omitempty"`
+
+	// HeartbeatTolerance configures the duration to wait for a response to a heartbeat
+	// before assuming the session connection is dead and attempting to reconnect.
+	//
+	// See the [heartbeat_tolerance parameter in the ngrok docs] for additional details.
+	HeartbeatTolerance time.Duration `json:"heartbeatTolerance,omitempty"`
+
+	// HeartbeatInterval configures how often the session will send heartbeat
+	// messages to the ngrok service to check session liveness.
+	//
+	// See the [heartbeat_interval parameter in the ngrok docs] for additional details.
+	HeartbeatInterval time.Duration `json:"heartbeatInterval,omitempty"`
 
 	tunnel Tunnel
 
@@ -93,6 +113,18 @@ func (n *Ngrok) ProvisionOpts() error {
 
 	if n.Region != "" {
 		n.opts = append(n.opts, ngrok.WithRegion(n.Region))
+	}
+
+	if n.Server != "" {
+		n.opts = append(n.opts, ngrok.WithServer(n.Server))
+	}
+
+	if n.HeartbeatInterval != 0 {
+		n.opts = append(n.opts, ngrok.WithHeartbeatInterval(n.HeartbeatInterval))
+	}
+
+	if n.HeartbeatTolerance != 0 {
+		n.opts = append(n.opts, ngrok.WithHeartbeatTolerance(n.HeartbeatTolerance))
 	}
 
 	return nil
@@ -157,6 +189,18 @@ func (n *Ngrok) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				if !d.AllArgs(&n.Region) {
 					return d.ArgErr()
 				}
+			case "server":
+				if !d.AllArgs(&n.Server) {
+					return d.ArgErr()
+				}
+			case "heartbeat_tolerance":
+				if err := n.unmarshalHeartbeatTolerance(d); err != nil {
+					return err
+				}
+			case "heartbeat_interval":
+				if err := n.unmarshalHeartbeatInterval(d); err != nil {
+					return err
+				}
 			case "tunnel":
 				if err := n.unmarshalTunnel(d); err != nil {
 					return err
@@ -166,6 +210,38 @@ func (n *Ngrok) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 			}
 		}
 	}
+
+	return nil
+}
+
+func (n *Ngrok) unmarshalHeartbeatTolerance(d *caddyfile.Dispenser) error {
+	var toleranceStr string
+	if !d.AllArgs(&toleranceStr) {
+		return d.ArgErr()
+	}
+
+	heartbeatTolerance, err := caddy.ParseDuration(toleranceStr)
+	if err != nil {
+		return d.Errf("parsing heartbeat_tolerance duration: %v", err)
+	}
+
+	n.HeartbeatTolerance = heartbeatTolerance
+
+	return nil
+}
+
+func (n *Ngrok) unmarshalHeartbeatInterval(d *caddyfile.Dispenser) error {
+	var intervalStr string
+	if !d.AllArgs(&intervalStr) {
+		return d.ArgErr()
+	}
+
+	heartbeatInterval, err := caddy.ParseDuration(intervalStr)
+	if err != nil {
+		return d.Errf("parsing heartbeat_interval duration: %v", err)
+	}
+
+	n.HeartbeatInterval = heartbeatInterval
 
 	return nil
 }

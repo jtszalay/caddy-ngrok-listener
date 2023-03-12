@@ -30,7 +30,7 @@ Currently, the module does not support the extended ngrok options, e.g. allow/de
 			ngrok {
 				auth_token $NGROK_AUTH_TOKEN
 				tunnel labeled {
-					labels {
+					label {
 						edge edghts_LABEL
 					}
 				}

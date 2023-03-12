@@ -25,6 +25,24 @@ func WithProxyURL(url *url.URL) ConnectOption
 // [root_cas parameter in the ngrok docs]: https://ngrok.com/docs/ngrok-agent/config#root_cas
 func WithCA(pool *x509.CertPool) ConnectOption
 
+// https://github.com/ngrok/ngrok-go/blob/main/config/tls_termination.go
+// WithTermination sets the key and certificate in PEM format for TLS termination at the ngrok
+// edge.
+func WithTermination(certPEM, keyPEM []byte) TLSEndpointOption 
+
+
+// https://github.com/ngrok/ngrok-go/blob/main/config/mutual_tls.go
+
+type mutualTLSEndpointOption []*x509.Certificate
+
+// WithMutualTLSCA adds a list of [x509.Certificate]'s to use for mutual TLS
+// authentication.
+// These will be used to authenticate client certificates for requests at the
+// ngrok edge.
+func WithMutualTLSCA(certs ...*x509.Certificate) interface {
+	HTTPEndpointOption
+	TLSEndpointOption
+}
 
 
 https://github.com/ngrok/ngrok-go/blob/main/config/http_headers.go
@@ -43,21 +61,6 @@ func WithResponseHeader(name, value string) HTTPEndpointOption
 func WithRemoveRequestHeader(name string) HTTPEndpointOption
 // WithRemoveResponseHeader removes a header from responses from this edge.
 func WithRemoveResponseHeader(name string) HTTPEndpointOption
-
-
-
-// https://github.com/ngrok/ngrok-go/blob/main/config/mutual_tls.go
-
-type mutualTLSEndpointOption []*x509.Certificate
-
-// WithMutualTLSCA adds a list of [x509.Certificate]'s to use for mutual TLS
-// authentication.
-// These will be used to authenticate client certificates for requests at the
-// ngrok edge.
-func WithMutualTLSCA(certs ...*x509.Certificate) interface {
-	HTTPEndpointOption
-	TLSEndpointOption
-}
 
 
 // https://github.com/ngrok/ngrok-go/blob/main/config/oauth.go
@@ -83,8 +86,6 @@ func WithOAuthScope(scope ...string) OAuthOption
 func WithOAuth(provider string, opts ...OAuthOption) HTTPEndpointOption
 
 
-
-
 // https://github.com/ngrok/ngrok-go/blob/main/config/oidc.go
 type oidcOptions struct {
 	IssuerURL    string
@@ -104,17 +105,6 @@ func WithAllowOIDCEmail(addr ...string) OIDCOption
 // WithOIDC configures this edge with the the given OIDC provider.
 // Overwrites any previously-set OIDC configuration.
 func WithOIDC(issuerURL string, clientID string, clientSecret string, opts ...OIDCOption) HTTPEndpointOption 
-
-
-
-
-
-// https://github.com/ngrok/ngrok-go/blob/main/config/tls_termination.go
-// WithTermination sets the key and certificate in PEM format for TLS termination at the ngrok
-// edge.
-func WithTermination(certPEM, keyPEM []byte) TLSEndpointOption 
-
-
 
 
 // https://github.com/ngrok/ngrok-go/blob/main/config/webhook_verification.go
@@ -183,3 +173,16 @@ func WithStopHandler(handler ServerCommandHandler) ConnectOption {
 	}
 }
 ```
+
+
+* Test plan:
+	For each tunnel type test the following:
+	* parse
+	* provision
+	* validate
+
+	For ngrok.go test:
+	* parse of toplevel options
+	* basic parse of each tunnel type
+	* provision
+	* validate

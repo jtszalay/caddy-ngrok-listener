@@ -36,7 +36,17 @@ type TLS struct {
 	// Paths to the TLS certificate authority to verify client certs in mutual TLS
 	MutualTLSCAs []string `json:"mutual_tls_cas,omitempty"`
 
+	// TLSTermination sets paths to the key and certificate in PEM format for TLS termination at the ngrok edge.
+	TLSTermination *tlsTermination `json:"tls_termination,omitempty"`
+
 	l *zap.Logger
+}
+
+type tlsTermination struct {
+	// Path to the CertPEM
+	CertPEM string `json:"cert_pem,omitempty"`
+	// Path to the KeyPEM
+	KeyPEM string `json:"key_pem,omitempty"`
 }
 
 // CaddyModule implements caddy.Module
@@ -96,6 +106,20 @@ func (t *TLS) provisionOpts() error {
 		}
 	}
 
+	if t.TLSTermination != nil {
+		certBytes, err := os.ReadFile(t.TLSTermination.CertPEM)
+		if err != nil {
+			return fmt.Errorf("provisioning tls_termination - failed to read CertPem file: %v", err)
+		}
+		keyBytes, err := os.ReadFile(t.TLSTermination.KeyPEM)
+		if err != nil {
+			return fmt.Errorf("provisioning tls_termination - failed to read KeyPem file: %v", err)
+		}
+
+		t.opts = append(t.opts, config.WithTermination(certBytes, keyBytes))
+
+	}
+
 	return nil
 }
 
@@ -128,6 +152,11 @@ func (t *TLS) doReplace() {
 		actual := repl.ReplaceKnown(path, "")
 
 		t.MutualTLSCAs[index] = actual
+	}
+
+	if t.TLSTermination != nil {
+		t.TLSTermination.CertPEM = repl.ReplaceKnown(t.TLSTermination.CertPEM, "")
+		t.TLSTermination.KeyPEM = repl.ReplaceKnown(t.TLSTermination.KeyPEM, "")
 	}
 }
 
@@ -167,6 +196,10 @@ func (t *TLS) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				}
 
 				t.MutualTLSCAs = append(t.MutualTLSCAs, d.RemainingArgs()...)
+			case "tls_termination":
+				if err := t.unmarshalTLSTermination(d); err != nil {
+					return err
+				}
 			default:
 				return d.Errf("unrecognized subdirective %s", subdirective)
 			}
@@ -192,6 +225,51 @@ func (t *TLS) unmarshalDenyCidr(d *caddyfile.Dispenser) error {
 	}
 
 	t.DenyCIDR = append(t.DenyCIDR, d.RemainingArgs()...)
+
+	return nil
+}
+
+func (t *TLS) unmarshalTLSTermination(d *caddyfile.Dispenser) error {
+	var (
+		hasArgs     bool
+		certPEM     string
+		keyPEM      string
+		foundConfig bool
+	)
+
+	if d.NextArg() { // tls_termination is defined inline
+
+		certPEM = d.Val()
+
+		hasArgs = true
+		if !d.AllArgs(&keyPEM) {
+			return d.ArgErr()
+		}
+
+		foundConfig = true
+
+		t.TLSTermination = &tlsTermination{KeyPEM: keyPEM, CertPEM: certPEM}
+
+	}
+	for nesting := d.Nesting(); d.NextBlock(nesting); { // block of tls_termination
+		certPEM = d.Val()
+
+		if hasArgs {
+			return d.Err("cannot specify tls_termination in both arguments and block") // because it would be weird
+		}
+
+		if !d.AllArgs(&keyPEM) {
+			return d.ArgErr()
+		}
+
+		foundConfig = true
+
+		t.TLSTermination = &tlsTermination{KeyPEM: keyPEM, CertPEM: certPEM}
+	}
+
+	if !foundConfig {
+		return d.ArgErr()
+	}
 
 	return nil
 }

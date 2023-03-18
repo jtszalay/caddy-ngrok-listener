@@ -350,3 +350,149 @@ func TestTLSMTLS(t *testing.T) {
 	cases.runAll(t)
 
 }
+
+func TestTLSTermination(t *testing.T) {
+
+	cases := genericTestCases[*TLS]{
+		{
+			name: "absent",
+			caddyInput: `tls {
+			}`,
+			expectConfig: func(t *testing.T, actual *TLS) {
+				require.Empty(t, actual.TLSTermination)
+			},
+			expectedOpts: config.TLSEndpoint(),
+		},
+		{
+			name: "no-args - inline",
+			caddyInput: `tls {
+				tls_termination
+			}`,
+			expectUnmarshalErr: true,
+		},
+		{
+			name: "no-args - block",
+			caddyInput: `tls {
+				tls_termination {
+					
+				}
+			}`,
+			expectUnmarshalErr: true,
+		},
+		{
+			name: "too-many-args-inline",
+			caddyInput: `tls {
+				tls_termination cert.pem key.pem foo.pem
+			}`,
+			expectUnmarshalErr: true,
+		},
+		{
+			name: "too-many-args-block",
+			caddyInput: `tls {
+				tls_termination {
+					cert.pem key.pem foo.pem
+				}
+			}`,
+			expectUnmarshalErr: true,
+		},
+		{
+			name: "non-exist-cert-path-inline",
+			caddyInput: `tls {
+				tls_termination testdata/bogus-cert.pem testdata/bogus-key.pem
+			}`,
+			expectConfig: func(t *testing.T, actual *TLS) {
+				require.Equal(
+					t,
+					&tlsTermination{"testdata/bogus-cert.pem", "testdata/bogus-key.pem"},
+					actual.TLSTermination,
+				)
+			},
+			expectProvisionErr: true,
+		},
+		{
+			name: "non-exist-cert-path-block",
+			caddyInput: `tls {
+				tls_termination {
+					testdata/bogus-cert.pem testdata/bogus-key.pem
+				}
+			}`,
+			expectConfig: func(t *testing.T, actual *TLS) {
+				require.Equal(
+					t,
+					&tlsTermination{"testdata/bogus-cert.pem", "testdata/bogus-key.pem"},
+					actual.TLSTermination,
+				)
+			},
+			expectProvisionErr: true,
+		},
+		{
+			name: "non-exist-key-path-inline",
+			caddyInput: `tls {
+				tls_termination testdata/cert.pem testdata/bogus-key.pem
+			}`,
+			expectConfig: func(t *testing.T, actual *TLS) {
+				require.Equal(
+					t,
+					&tlsTermination{"testdata/cert.pem", "testdata/bogus-key.pem"},
+					actual.TLSTermination,
+				)
+			},
+			expectProvisionErr: true,
+		},
+		{
+			name: "non-exist-key-path-block",
+			caddyInput: `tls {
+				tls_termination {
+					testdata/cert.pem testdata/bogus-key.pem
+				}
+			}`,
+			expectConfig: func(t *testing.T, actual *TLS) {
+				require.Equal(
+					t,
+					&tlsTermination{"testdata/cert.pem", "testdata/bogus-key.pem"},
+					actual.TLSTermination,
+				)
+			},
+			expectProvisionErr: true,
+		},
+		{
+			name: "with termination - inline",
+			caddyInput: `tls {
+				tls_termination {
+					testdata/cert.pem testdata/key.pem
+				}
+			}`,
+			expectConfig: func(t *testing.T, actual *TLS) {
+				require.Equal(
+					t,
+					&tlsTermination{"testdata/cert.pem", "testdata/key.pem"},
+					actual.TLSTermination,
+				)
+			},
+			expectedOpts: config.TLSEndpoint(
+				config.WithTermination([]byte("cert"), []byte("key")),
+			),
+		},
+		{
+			name: "with termination - block",
+			caddyInput: `tls {
+				tls_termination {
+					testdata/cert.pem testdata/key.pem
+				}
+			}`,
+			expectConfig: func(t *testing.T, actual *TLS) {
+				require.Equal(
+					t,
+					&tlsTermination{"testdata/cert.pem", "testdata/key.pem"},
+					actual.TLSTermination,
+				)
+			},
+			expectedOpts: config.TLSEndpoint(
+				config.WithTermination([]byte("cert"), []byte("key")),
+			),
+		},
+	}
+
+	cases.runAll(t)
+
+}
